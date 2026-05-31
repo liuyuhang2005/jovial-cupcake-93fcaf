@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>小狗找爸爸 - 手机大作战</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #ffdcb6; /* 接近原图的暖色背景 */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none; /* 禁止移动端默认触摸行为 */
+        }
+        canvas {
+            display: block;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        #score-board {
+            padding: 20px;
+            font-size: 24px;
+            color: #5d4037;
+            font-weight: bold;
+            text-shadow: 2px 2px 0px #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #controls {
+            pointer-events: auto;
+            display: none; /* 默认隐藏，移动端显示 */
+            width: 100%;
+            height: 150px;
+            padding-bottom: 20px;
+        }
+        .touch-btn {
+            background: rgba(255, 255, 255, 0.5);
+            border: 2px solid #5d4037;
+            border-radius: 50%;
+            width: 70px;
+            height: 70px;
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            user-select: none;
+            color: #5d4037;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .touch-btn:active {
+            background: rgba(255, 255, 255, 0.8);
+            transform: scale(0.95);
+        }
+        #btn-left { bottom: 30px; left: 20px; }
+        #btn-right { bottom: 30px; left: 100px; }
+        #btn-jump { bottom: 30px; right: 110px; background: rgba(64, 158, 255, 0.5); color: white;}
+        #btn-attack { bottom: 30px; right: 20px; background: rgba(255, 100, 100, 0.7); color: white; font-size: 24px;} 
+
+        /* 游戏结束/开始 遮罩 */
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            z-index: 10;
+        }
+        .modal {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            border: 5px solid #2d7af1; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 600px;
+            max-height: 90%;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        h1 { color: #2d7af1; margin-top: 0; }
+        p { font-size: 18px; color: #555; }
+        button.start-btn {
+            background: #2d7af1;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            transition: transform 0.1s;
+            display: block;
+            width: 100%;
+            max-width: 350px;
+            margin-left: auto;
+            margin-right: auto;
+            white-space: nowrap;
+        }
+        button.secondary-btn {
+            background: #ffb74d; 
+            color: #5d4037;
+        }
+        button.start-btn:hover { transform: scale(1.05); }
+        button.start-btn:active { transform: scale(0.95); }
+
+        /* 图鉴列表样式 */
+        .handbook-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            text-align: left;
+            margin-top: 20px;
+            padding: 10px;
+        }
+        .handbook-item {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            border: 2px solid #eee;
+        }
+        .handbook-canvas-container {
+            width: 60px;
+            height: 60px;
+            background: #ffdcb6;
+            border-radius: 50%;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            flex-shrink: 0;
+        }
+        .handbook-info h3 { margin: 0 0 5px 0; color: #333; font-size: 16px; }
+        .handbook-info p { margin: 0; font-size: 12px; color: #666; line-height: 1.4; }
+
+        /* 游戏攻略样式 */
+        .strategy-content {
+            text-align: left;
+            background: #fffcf5;
+            border: 2px dashed #ffb74d;
+            border-radius: 15px;
+            padding: 15px;
+            color: #5d4037;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-top: 15px;
+        }
+        .strategy-content h3 {
+            color: #2d7af1;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            border-left: 4px solid #ffb74d;
+            padding-left: 8px;
+        }
+        .strategy-content p, .strategy-content ul {
+            margin: 0 0 10px 0;
+        }
+
+        /* 暂停界面 */
+        #pause-screen {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 20;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 60px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px black;
+            pointer-events: none; /* 让点击穿透 */
+        }
+
+        /* 警告弹窗 */
+        #warning-modal {
+            display: none;
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 10px;
+            border: 4px solid #ffeba7;
+            text-align: center;
+            z-index: 100;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+            animation: pulse 1s infinite;
+        }
+        #warning-modal h2 { margin: 0 0 10px 0; font-size: 28px; }
+        #warning-modal p { color: white; font-size: 18px; margin: 0; font-weight: bold; }
+
+        @keyframes pulse {
+            0% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.05); }
+            100% { transform: translateX(-50%) scale(1); }
+        }
+
+        @media (hover: none) and (pointer: coarse) {
+            #controls { display: block; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="ui-layer">
+        <div id="score-board">
+            <span>骨头: <span id="score-val">0</span> | 手机: <span id="cooldown-val">准备就绪</span></span>
+            <span style="font-size: 14px; font-weight: normal; opacity: 0.8;">键盘 P / Esc 暂停</span>
+        </div>
+        <div id="controls">
+            <div id="btn-left" class="touch-btn">←</div>
+            <div id="btn-right" class="touch-btn">→</div>
+            <div id="btn-jump" class="touch-btn">↑</div>
+            <div id="btn-attack" class="touch-btn">📱</div>
+        </div>
+    </div>
+
+    <div id="pause-screen">暂停中</div>
+
+    <div id="warning-modal">
+        <h2>⚠️ 警告 ⚠️</h2>
+        <p>克隆体即将产生！<br>请做好逃跑和攻击准备！</p>
+    </div>
+
+    <div id="overlay">
+        <div class="modal" id="start-modal">
+            <h1>小狗找爸爸 - 手机大作战</h1>
+            <p>帮助小狗穿过障碍，找到微波炉爸爸！</p>
+            <p>⌨️ <b>移动:</b> 方向键 / A / D</p>
+            <p>⌨️ <b>跳跃:</b> 空格键 / ↑ / W</p>
+            <p>⌨️ <b>攻击:</b> K / Ctrl / Shift 键 (投掷手机!)</p>
+            <p>⏸️ <b>暂停:</b> P 键 / Esc 键</p>
+            <button class="start-btn" onclick="window.gameControl.startGame()">▶️ 开始游戏</button>
+            <div style="display: flex; gap: 10px; width: 100%; max-width: 350px; margin: 10px auto;">
+                <button class="start-btn secondary-btn" style="flex:1; margin:0; padding: 10px;" onclick="window.gameControl.openHandbook()">📖 角色图鉴</button>
+                <button class="start-btn secondary-btn" style="flex:1; margin:0; padding: 10px; background-color: #81c784; color: white;" onclick="window.gameControl.openStrategy()">💡 游戏攻略</button>
+            </div>
+        </div>
+
+        <div class="modal" id="game-over-modal" style="display: none;">
+            <h1 id="end-title">游戏结束</h1>
+            <p id="end-reason">你掉下去了...</p>
+            <button class="start-btn" onclick="window.gameControl.resetGame()">再试一次</button>
+            <button class="start-btn secondary-btn" onclick="window.gameControl.backToMenu()">返回主菜单</button>
+        </div>
+
+        <div class="modal" id="handbook-modal" style="display: none;">
+            <h1>角色图鉴</h1>
+            <div class="handbook-list" id="handbook-content" style="max-height: 400px; overflow-y: auto;">
+            </div>
+            <button class="start-btn secondary-btn" onclick="window.gameControl.closeHandbook()">返回主菜单</button>
+        </div>
+
+        <div class="modal" id="strategy-modal" style="display: none;">
+            <h1>📖“ 小狗找爸爸”游戏通关攻略</h1>
+            <div class="strategy-content" style="max-height: 400px; overflow-y: auto;">
+                <h3>🎯 终极目标</h3>
+                <p>控制小狗，越过重重深渊，躲避或击落各种飞来的《工科数学分析》书本与随机产生的分数，最终抵达终点，找到小狗的爸爸微波炉！</p>
+                
+                <h3>🕹️ 动作与战斗机制</h3>
+                <ul>
+                    <li><b>踩头偷袭：</b> 飞在天上的小狗是无敌的！普通导航员和宇航员都可以直接跳上去从头上踩死，还能借此获得二次向上的跳跃弹力！</li>
+                    <li><b>手机拦截：</b> 可以用从大一学弟没收到的手机不仅能消灭地面敌人，在空中还能<strong>相互抵消</strong>宇航员扔出的《工科数学分析》书本和碳原子随机产生的分数！合理抛掷手机能组成空中防护网。</li>
+                </ul>
+
+                <h3>🔥 梁叫兽与克隆体（极度危险！）</h3>
+                <p>大BOSS “梁叫兽” 会从远处接近并追踪你。他极其强大，物理防御极高，<strong>手机攻击对他无效</strong>！不过他<strong>无法跳跃</strong>。</p>
+                <ul>
+                    <li><b>喷射牛奶：</b> 如果你在梁叫兽的正上方高空<strong>跳跃</strong>，他会大喊“爽飞了”，并朝天空喷射黏稠牛奶。</li>
+                    <li><b>出现警报：</b> 小狗如果碰到缓慢上升的黏稠牛奶<strong>不会死</strong>，但屏幕会亮起警报。</li>
+                    <li><b>克隆体产生：</b> <strong>5秒</strong>之后，会在你当初被牛奶碰到的那个位置产生一个极速狂奔、双眼通红的克隆小狗，对你展开不死不休的疯狂追杀！如果不小心碰到牛奶后，看到警报应立刻跑开，并转头用手机消灭它。</li>
+                </ul>
+
+                <h3>💰 分数</h3>
+                <p>吃掉地图上的美味狗骨头可加分；消灭敌人也会掉落可食用的狗骨头。越快通关、消灭越多敌人、得分就越高。最高可达3200分！</p>
+            </div>
+            <button class="start-btn secondary-btn" onclick="window.gameControl.closeStrategy()">返回主菜单</button>
+        </div>
+    </div>
+
+<script>
+    // 先行声明全局核心游戏状态控制器，绝对防止 ReferenceError
+    window.gameControl = {
+        startGame: function() {
+            document.getElementById('overlay').style.display = 'none';
+            document.getElementById('start-modal').style.display = 'none';
+            document.getElementById('game-over-modal').style.display = 'none';
+            document.getElementById('handbook-modal').style.display = 'none';
+            document.getElementById('strategy-modal').style.display = 'none';
+            warningModal.style.display = 'none';
+            
+            resize();
+            initLevel();
+            gameRunning = true;
+            isPaused = false;
+            animationFrameId = requestAnimationFrame(gameLoop);
+        },
+        resetGame: function() {
+            this.startGame();
+        },
+        backToMenu: function() {
+            document.getElementById('game-over-modal').style.display = 'none';
+            document.getElementById('start-modal').style.display = 'block';
+        },
+        openHandbook: function() {
+            document.getElementById('start-modal').style.display = 'none';
+            document.getElementById('handbook-modal').style.display = 'block';
+            populateHandbook();
+        },
+        closeHandbook: function() {
+            document.getElementById('handbook-modal').style.display = 'none';
+            document.getElementById('start-modal').style.display = 'block';
+        },
+        openStrategy: function() {
+            document.getElementById('start-modal').style.display = 'none';
+            document.getElementById('strategy-modal').style.display = 'block';
+        },
+        closeStrategy: function() {
+            document.getElementById('strategy-modal').style.display = 'none';
+            document.getElementById('start-modal').style.display = 'block';
+        },
+        gameOver: function(reason) {
+            if (!gameRunning) return; 
+            gameRunning = false;
+            cancelAnimationFrame(animationFrameId);
+            document.getElementById('overlay').style.display = 'flex';
+            document.getElementById('game-over-modal').style.display = 'block';
+            document.getElementById('start-modal').style.display = 'none';
+            document.getElementById('end-title').innerText = "游戏失败";
+            document.getElementById('end-title').style.color = "#e53935";
+            document.getElementById('end-reason').innerText = reason + `\n最终得分: ${score}`;
+        },
+        gameWin: function() {
+            if (!gameRunning) return;
+            gameRunning = false;
+            cancelAnimationFrame(animationFrameId);
+            document.getElementById('overlay').style.display = 'flex';
+            document.getElementById('game-over-modal').style.display = 'block';
+            document.getElementById('start-modal').style.display = 'none';
+            document.getElementById('end-title').innerText = "🎉 找到爸爸了! 🎉";
+            document.getElementById('end-title').style.color = "#2d7af1";
+            document.getElementById('end-reason').innerText = `太棒了！小狗和微波炉爸爸团聚了。\n总得分: ${score}`; 
+        }
+    };
+
+    /** * 游戏配置与常量 
+     */
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score-val');
+    const cooldownEl = document.getElementById('cooldown-val');
+    const pauseScreen = document.getElementById('pause-screen');
+    const warningModal = document.getElementById('warning-modal');
+    
+    // 物理参数
+    const GRAVITY = 0.6;
+    const FRICTION = 0.75; 
+    const MOVE_SPEED = 4; 
+    const JUMP_FORCE = 16; 
+    const ATTACK_COOLDOWN_MAX = 45; 
+    
+    // 游戏状态
+    var gameRunning = false;
+    var isPaused = false; 
+    var score = 0;
+    var attackCooldown = 0;
+    var animationFrameId;
+    var cameraX = 0;
+    var phoneThrowCount = 0; 
+    var milkActive = false; 
+
+    // 输入状态
+    const keys = {
+        right: false,
+        left: false,
+        up: false,
+        attack: false 
+    };
+    
+    // 游戏对象集合与全局变量
+    var projectiles = []; 
+    var messageBubbles = []; 
+    var calculusAttacks = []; 
+    var carbonAttacks = []; 
+    var viscousMilks = []; 
+    var clones = []; 
+    var delayedEvents = []; 
+    var goal;
+    var player; 
+    var platforms = []; 
+    var bones = []; 
+    var enemies = []; 
+    var worldWidth = 5000; 
+
+    /**
+     * 游戏对象类
+     */
+    class Player {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.w = 40; 
+            this.h = 40; 
+            this.vx = 0;
+            this.vy = 0;
+            this.grounded = false;
+            this.facingRight = true;
+        }
+
+        update() {
+            if (keys.right) {
+                this.vx += 1;
+                this.facingRight = true;
+            }
+            if (keys.left) {
+                this.vx -= 1;
+                this.facingRight = false;
+            }
+
+            this.vx *= FRICTION;
+            this.vx = Math.max(Math.min(this.vx, MOVE_SPEED), -MOVE_SPEED);
+
+            if (keys.up && this.grounded) {
+                this.vy = -JUMP_FORCE;
+                this.grounded = false;
+            }
+            
+            if (keys.attack && attackCooldown === 0) {
+                this.attack();
+                attackCooldown = ATTACK_COOLDOWN_MAX;
+            }
+            
+            this.vy += GRAVITY;
+            this.x += this.vx;
+            this.y += this.vy;
+            this.grounded = false;
+        }
+        
+        attack() {
+            phoneThrowCount++;
+            if (phoneThrowCount % 5 === 1) { 
+                messageBubbles.push(new MessageBubble(this.x + this.w/2, this.y - 50, "这手机都是晚自习收的学弟学妹的手机，又不是我的，我将用它攻击导航员。"));
+            }
+
+            const dir = this.facingRight ? 1 : -1;
+            const startX = this.x + (this.facingRight ? this.w : -15); 
+            const startY = this.y + this.h / 2 - 12; 
+            
+            projectiles.push(new MobilePhone(startX, startY, dir));
+        }
+
+        draw(ctx, camX) {
+            const drawX = this.x - camX;
+            const drawY = this.y;
+
+            ctx.save();
+            ctx.translate(drawX + this.w/2, drawY + this.h/2);
+            if (!this.facingRight) ctx.scale(-1, 1);
+
+            ctx.fillStyle = "#fff";
+            ctx.beginPath();
+            ctx.arc(0, 5, 18, 0, Math.PI * 2); 
+            ctx.arc(-12, 0, 10, 0, Math.PI * 2);
+            ctx.arc(12, 0, 10, 0, Math.PI * 2);
+            ctx.arc(0, -12, 12, 0, Math.PI * 2);
+            ctx.arc(0, 15, 10, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = "#222";
+            ctx.beginPath();
+            ctx.ellipse(12, -2, 10, 14, 0.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = "#000";
+            ctx.beginPath();
+            ctx.arc(5, -2, 1.5, 0, Math.PI * 2); 
+            ctx.arc(15, -2, 1.5, 0, Math.PI * 2); 
+            ctx.fill();
+            
+            ctx.fillStyle = "#ffb7b2";
+            ctx.beginPath();
+            ctx.arc(6, 2, 3, 0, Math.PI * 2);
+            ctx.arc(14, 2, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = "#000";
+            ctx.beginPath();
+            ctx.ellipse(10, 2, 4, 3, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+    }
+
+    class ClonePuppy {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.w = 40; 
+            this.h = 40; 
+            this.vx = 0;
+            this.vy = 0;
+            this.speed = 6; 
+            this.active = true;
+            this.facingRight = true;
+        }
+
+        update() {
+            if (!this.active) return;
+
+            if (player.x > this.x) {
+                this.vx = this.speed * 0.5;
+                this.facingRight = true;
+            } else {
+                this.vx = -this.speed * 0.5;
+                this.facingRight = false;
+            }
+            
+            this.vy += GRAVITY;
+            this.x += this.vx;
+            this.y += this.vy;
+
+            let onGround = false;
+            for (let p of platforms) {
+                if (this.x < p.x + p.w && this.x + this.w > p.x &&
+                    this.y < p.y + p.h && this.y + this.h > p.y) {
+                    
+                    const prevY = this.y - this.vy;
+                    if (prevY + this.h <= p.y + 10) { 
+                        onGround = true;
+                        this.vy = 0;
+                        this.y = p.y - this.h;
+                    }
+                }
+            }
+            if (this.y > 600) this.active = false;
+        }
+
+        draw(ctx, camX) {
+            if (!this.active) return;
+            const drawX = this.x - camX;
+            const drawY = this.y;
+
+            ctx.save();
+            ctx.translate(drawX + this.w/2, drawY + this.h/2);
+            if (!this.facingRight) ctx.scale(-1, 1);
+
+            ctx.fillStyle = "#9e9e9e"; 
+            ctx.beginPath();
+            ctx.arc(0, 5, 18, 0, Math.PI * 2); 
+            ctx.arc(-12, 0, 10, 0, Math.PI * 2);
+            ctx.arc(12, 0, 10, 0, Math.PI * 2);
+            ctx.arc(0, -12, 12, 0, Math.PI * 2);
+            ctx.arc(0, 15, 10, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = "#212121";
+            ctx.beginPath();
+            ctx.ellipse(12, -2, 10, 14, 0.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = "#d50000"; 
+            ctx.beginPath();
+            ctx.arc(5, -2, 2, 0, Math.PI * 2); 
+            ctx.arc(15, -2, 2, 0, Math.PI * 2); 
+            ctx.fill();
+            
+            ctx.fillStyle = "#000";
+            ctx.beginPath();
+            ctx.ellipse(10, 2, 4, 3, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+            ctx.fillStyle = "red";
+            ctx.font = "bold 12px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("克隆体", drawX + this.w/2, drawY - 10);
+        }
+    }
+
+    class Platform {
+        constructor(x, y, w, h) {
+            this.x = x;
+            this.y = y;
+            this.w = w;
+            this.h = h;
+        }
+        draw(ctx, camX) {
+            const drawX = this.x - camX;
+            ctx.fillStyle = "#8d6e63"; 
+            ctx.fillRect(drawX, this.y, this.w, this.h);
+            ctx.strokeStyle = "#5d4037";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(drawX, this.y, this.w, this.h);
+            ctx.fillStyle = "#aed581"; 
+            ctx.fillRect(drawX, this.y, this.w, 8);
+        }
+    }
+
+    class Bone {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.w = 30;
+            this.h = 15;
+            this.collected = false;
+        }
+        draw(ctx, camX, time) {
+            if (this.collected) return;
+            const drawX = this.x - camX;
+            const floatY = this.y + Math.sin(time / 200) * 5;
+
+            ctx.save();
+            ctx.translate(drawX + this.w/2, floatY + this.h/2);
+            ctx.rotate(Math.sin(time/500) * 0.2);
+
+            ctx.fillStyle = "#eee";
+            ctx.strokeStyle = "#ccc";
+            ctx.lineWidth = 2;
+
+            const r = 6;
+            ctx.beginPath(); ctx.arc(-10, -3, r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.arc(-10, 3, r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.arc(10, -3, r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.arc(10, 3, r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = "#eee";
+            ctx.fillRect(-10, -3, 20, 6);
+            ctx.beginPath(); ctx.moveTo(-10, -3); ctx.lineTo(10, -3); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-10, 3); ctx.lineTo(10, 3); ctx.stroke();
+
+            ctx.restore();
+        }
+    }
+    
+    class CalculusAttack {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.w = 60;
+            this.h = 25;
+            this.vx = -1.5; 
+            this.vy = -5; 
+            this.active = true;
+            this.rotation = 0;
+            this.rotationSpeed = 0.2;
+            this.scoreText = '分析：' + Math.floor(Math.random() * 20) * 5; 
+        }
+
+        update() {
+            if (!this.active) return;
+            this.vy += GRAVITY * 0.5; 
+            this.x += this.vx;
+            this.y += this.vy;
+            this.rotation += this.rotationSpeed;
+            if (this.y > canvas.height || this.x + this.w < cameraX) this.active = false;
+        }
+
+        draw(ctx, camX) {
+            if (!this.active) return;
+            const drawX = this.x - camX;
+            ctx.save();
+            ctx.translate(drawX + this.w / 2, this.y + this.h / 2);
+            ctx.rotate(this.rotation);
+            ctx.fillStyle = "#ffb300"; 
+            ctx.fillRect(-this.w / 2, -this.h / 2, this.w, this.h);
+            ctx.strokeStyle = "#e65100";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(-this.w / 2, -this.h / 2, this.w, this.h);
+            ctx.fillStyle = "black";
+            ctx.font = "bold 12px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(this.scoreText, 0, 4);
+            ctx.restore();
+        }
+    }
+    
+    class MobilePhone {
+        constructor(x, y, dir) {
+            this.x = x;
+            this.y = y;
+            this.w = 15;
+            this.h = 25;
+            this.vx = dir * 1.0; 
+            this.vy = 0;
+            this.active = true;
+            this.life = 500; 
+        }
+
+        update() {
+            if (!this.active) return;
+            this.x += this.vx;
+            this.y += this.vy;
+            this.life--;
+            if (this.life <= 0) this.active = false;
+        }
+
+        draw(ctx, camX) {
+            if (!this.active) return;
+            const drawX = this.x - camX;
+            ctx.fillStyle = "#333";
+            ctx.fillRect(drawX, this.y, this.w, this.h);
+            ctx.fillStyle = "#4a90e2";
+            ctx.fillRect(drawX + 2, this.y + 3, this.w - 4, this.h - 6);
+        }
+    }
+
+    class RandomNumber {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.w = 30;
+            this.h = 30;
+            this.vx = (Math.random() - 0.5) * 2; 
+            this.vy = -3; 
+            this.active = true;
+            this.rotation = 0;
+            this.rotationSpeed = (Math.random() - 0.5) * 0.5;
+            this.number = Math.floor(Math.random() * 100); 
+        }
+
+        update() {
+            if (!this.active) return;
+            this.vy += GRAVITY * 0.5; 
+            this.x += this.vx;
+            this.y += this.vy;
+            this.rotation += this.rotationSpeed;
+            if (this.y > canvas.height || this.x + this.w < cameraX || this.x > cameraX + canvas.width) this.active = false;
+        }
+
+        draw(ctx, camX) {
+            if (!this.active) return;
+            const drawX = this.x - camX;
+            ctx.save();
+            ctx.translate(drawX + this.w / 2, this.y + this.h / 2);
+            ctx.rotate(this.rotation);
+            ctx.fillStyle = "rgba(0, 255, 0, 0.7)"; 
+            ctx.beginPath();
+            ctx.arc(0, 0, this.w / 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "black";
+            ctx.font = "bold 14px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(this.number.toString(), 0, 5);
+            ctx.restore();
+        }
+    }
+    
+    class ViscousMilk {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.w = 40;
+            this.h = 40;
+            this.vx = (Math.random() - 0.5) * 0.5; 
+            this.vy = -1.5; 
+            this.active = true;
+            this.life = 600; 
+        }
+
+        update() {
+            if (!this.active) return;
+            this.x += this.vx;
+            this.y += this.vy; 
+            this.life--;
+            if (this.life <= 0 || this.y < -100) this.active = false;
+        }
+        
+        draw(ctx, camX) {
+            if (!this.active) return;
+            const drawX = this.x - camX;
+            ctx.save();
+            ctx.fillStyle = `rgba(255, 255, 255, 0.9)`; 
+            ctx.beginPath();
+            ctx.moveTo(drawX + 20, this.y);
+            ctx.quadraticCurveTo(drawX + 40, this.y + 20, drawX + 20, this.y + 40);
+            ctx.quadraticCurveTo(drawX, this.y + 20, drawX + 20, this.y);
+            ctx.fill();
+            ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+            ctx.beginPath();
+            ctx.arc(drawX + 20, this.y + 45, 5, 0, Math.PI*2);
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+
+    class CarbonAtom {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.w = 40;
+            this.h = 40;
+            this.active = true;
+            this.name = "碳原子";
+            this.attackTimer = 0;
+            this.baseAttackRate = 300; 
+        }
+
+        update() {
+             if (!this.active) return;
+             const attackRate = milkActive ? this.baseAttackRate * 2 : this.baseAttackRate;
+             this.attackTimer++;
+             if (this.attackTimer % attackRate === 0) {
+                 this.radiateRandomNumber();
+             }
+        }
+        
+        radiateRandomNumber() {
+            carbonAttacks.push(new RandomNumber(this.x, this.y));
+        }
+
+        draw(ctx, camX) {
+            if (!this.active) return;
+            const drawX = this.x - camX;
+            ctx.fillStyle = "black";
+            ctx.font = "bold 14px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(this.name, drawX + this.w/2, this.y - 5);
+            ctx.fillStyle = "#333";
+            ctx.beginPath();
+            ctx.arc(drawX + 20, this.y + 20, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "#fff";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.ellipse(drawX + 20, this.y + 20, 18, 12, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.ellipse(drawX + 20, this.y + 20, 18, 12, Math.PI / 2, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+    }
+
+    class Enemy {
+        constructor(x, y, range) {
+            this.startX = x;
+            this.x = x;
+            this.y = y;
+            this.w = 30;
+            this.h = 30;
+            this.range = range;
+            this.speed = 0.5; 
+            this.dir = 1;
+            this.active = true;
+            this.name = "普通导航员"; 
+        }
+        update() {
+            if (!this.active) return;
+            this.x += this.speed * this.dir;
+            if (this.x > this.startX + this.range || this.x < this.startX) {
+                this.dir *= -1;
+            }
+        }
+        draw(ctx, camX, time) {
+            if (!this.active) return;
+            const drawX = this.x - camX;
+            ctx.fillStyle = "black";
+            ctx.font = "bold 14px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(this.name, drawX + this.w/2, this.y - 5); 
+            ctx.fillStyle = "#e53935";
+            ctx.beginPath();
+            ctx.arc(drawX + 15, this.y + 15, 15, Math.PI, 0); 
+            ctx.lineTo(drawX + 30, this.y + 30);
+            ctx.lineTo(drawX, this.y + 30);
+            ctx.fill();
+            ctx.fillStyle = "white";
+            ctx.beginPath(); ctx.arc(drawX + 10, this.y + 10, 4, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(drawX + 20, this.y + 10, 4, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "black";
+            ctx.beginPath(); ctx.arc(drawX + 10 + this.dir*2, this.y + 10, 2, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(drawX + 20 + this.dir*2, this.y + 10, 2, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "black";
+            ctx.fillRect(drawX + 5, this.y + 30 - Math.abs(Math.sin(time/100))*5, 8, 5);
+            ctx.fillRect(drawX + 17, this.y + 30 - (5-Math.abs(Math.sin(time/100))*5), 8, 5);
+        }
+    }
+    
+    class Astronaut {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.w = 40;
+            this.h = 40;
+            this.active = true;
+            this.name = "宇航员"; 
+            this.attackTimer = 0; 
+            this.baseAttackRate = 300; 
+        }
+
+        update() {
+             if (!this.active) return;
+             const attackRate = milkActive ? this.baseAttackRate * 2 : this.baseAttackRate;
+             this.attackTimer++;
+             if (this.attackTimer % attackRate === 0) {
+                 this.throwCalculus();
+             }
+        }
+        
+        throwCalculus() {
+            calculusAttacks.push(new CalculusAttack(this.x + this.w/2, this.y + this.h/2 - 20));
+        }
+
+        draw(ctx, camX) {
+            if (!this.active) return;
+            const drawX = this.x - camX;
+            ctx.fillStyle = "black";
+            ctx.font = "bold 14px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(this.name, drawX + this.w/2, this.y - 5);
+            ctx.fillStyle = "#e0e0e0";
+            ctx.strokeStyle = "#555";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(drawX + 20, this.y + 10, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillRect(drawX + 10, this.y + 20, 20, 20);
+            ctx.strokeRect(drawX + 10, this.y + 20, 20, 20);
+            ctx.fillStyle = "#87ceeb"; 
+            ctx.beginPath();
+            ctx.arc(drawX + 20, this.y + 10, 6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+    
+    class ProfessorLiang extends Enemy { 
+        constructor(x, y, range) {
+            super(x, y, range);
+            this.w = 80;
+            this.h = 100;
+            this.y = y - this.h + this.w; 
+            this.name = "梁叫兽";
+            this.chase_speed = 0.5; 
+            this.dialogueTimer = 0; 
+            this.jumpCount = 0; 
+            this.jumpVerticalAlignmentThreshold = 50; 
+        }
+
+        update() {
+            if (!this.active) return;
+            const targetX = player.x;
+            if (this.x < targetX - 5) { 
+                this.x += this.chase_speed;
+            } else if (this.x > targetX + 5) {
+                this.x -= this.chase_speed;
+            }
+            const isVerticallyAligned = Math.abs((this.x + this.w/2) - (player.x + player.w/2)) < this.jumpVerticalAlignmentThreshold;
+            if (isVerticallyAligned && player.vy < -0.1) { 
+                this.jumpCount++;
+            } else if (player.grounded && !isVerticallyAligned) {
+                this.jumpCount = 0;
+            }
+            if (this.jumpCount > 5) {
+                viscousMilks.push(new ViscousMilk(this.x + this.w/2, this.y));
+                messageBubbles.push(new MessageBubble(this.x + this.w/2, this.y - 100, "爽飞了")); 
+                this.jumpCount = 0;
+            }
+            this.dialogueTimer++;
+            if (this.dialogueTimer % 900 === 0) { 
+                messageBubbles.push(new MessageBubble(this.x + this.w/2, this.y - 10, "有一个人谎报志愿时长，所有人就都别想加这0.5分"));
+            }
+        }
+
+        draw(ctx, camX, time) {
+            if (!this.active) return;
+            const drawX = this.x - camX;
+            ctx.fillStyle = "black";
+            ctx.font = "bold 16px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(this.name, drawX + this.w/2, this.y - 65); 
+            ctx.save();
+            const hoverY = this.y + this.h/2 + Math.sin(time/500) * 5; 
+            ctx.translate(drawX + this.w/2, hoverY);
+            ctx.fillStyle = "#2d7af1"; 
+            ctx.strokeStyle = "#000"; 
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(-10, -40);
+            ctx.quadraticCurveTo(-15, -50, -5, -60);
+            ctx.quadraticCurveTo(15, -60, 10, -40);
+            ctx.lineTo(10, -20);
+            ctx.lineTo(30, -20); 
+            ctx.quadraticCurveTo(40, -10, 30, 0); 
+            ctx.lineTo(35, 0); 
+            ctx.quadraticCurveTo(45, 10, 35, 20);
+            ctx.lineTo(30, 20); 
+            ctx.quadraticCurveTo(40, 35, 20, 40);
+            ctx.lineTo(-20, 40); 
+            ctx.lineTo(-20, -10); 
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = "red";
+            ctx.fillRect(-5, -50, 10, 5); 
+            ctx.restore();
+        }
+    }
+    
+    class DaddyGoal {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.w = 80;
+            this.h = 100;
+        }
+        draw(ctx, camX, time) {
+            if (this.x - camX > canvas.width) return; 
+            const drawX = this.x - camX;
+            const hoverY = this.y + Math.sin(time/300) * 10;
+            ctx.save();
+            ctx.translate(drawX + this.w/2, hoverY + this.h/2);
+            ctx.fillStyle = "#ff6f00"; 
+            ctx.strokeStyle = "#616161"; 
+            ctx.lineWidth = 4;
+            ctx.fillRect(-30, -40, 60, 60);
+            ctx.strokeRect(-30, -40, 60, 60);
+            ctx.fillStyle = "#2d7af1";
+            ctx.fillRect(35, -35, 10, 15);
+            ctx.fillRect(35, -15, 10, 15);
+            ctx.fillStyle = "#424242";
+            ctx.fillRect(-25, -35, 50, 50);
+            ctx.fillStyle = "white";
+            ctx.font = "bold 16px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("微波炉", 0, 0); 
+            ctx.shadowColor = "yellow";
+            ctx.shadowBlur = 20;
+            ctx.restore();
+            ctx.fillStyle = "#fff";
+            ctx.font = "bold 16px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("爸爸", drawX + this.w/2, hoverY - 20);
+        }
+    }
+    
+    class MessageBubble {
+        constructor(x, y, text) {
+            this.x = x;
+            this.y = y;
+            this.text = text;
+            this.life = 300; 
+        }
+
+        update() {
+            this.life--;
+            this.active = this.life > 0;
+        }
+        
+        draw(ctx, camX) {
+            if (!this.active) return;
+            const drawX = this.x - camX;
+            ctx.save();
+            ctx.font = "bold 14px Arial";
+            ctx.textAlign = "center";
+            const msg = this.text;
+            const textWidth = ctx.measureText(msg).width;
+            const bubbleW = textWidth + 20;
+            const bubbleH = 30;
+            const bubbleX = drawX - bubbleW / 2;
+            const bubbleY = this.y - 40;
+            ctx.fillStyle = "white";
+            ctx.strokeStyle = "#333";
+            ctx.lineWidth = 2;
+            ctx.fillRect(bubbleX, bubbleY, bubbleW, bubbleH);
+            ctx.strokeRect(bubbleX, bubbleY, bubbleW, bubbleH);
+            ctx.fillStyle = "black";
+            ctx.fillText(msg, drawX, bubbleY + 20);
+            ctx.restore();
+        }
+    }
+
+    /**
+     * 游戏逻辑与初始化
+     */
+    function initLevel() {
+        score = 0;
+        scoreEl.innerText = score;
+        attackCooldown = 0;
+        cooldownEl.innerText = '准备就绪';
+        phoneThrowCount = 0; 
+        milkActive = false; 
+        
+        player = new Player(100, 300);
+        platforms = [];
+        bones = [];
+        enemies = [];
+        
+        projectiles = [];
+        calculusAttacks = []; 
+        carbonAttacks = []; 
+        viscousMilks = []; 
+        clones = [];
+        delayedEvents = [];
+        messageBubbles = [];
+        
+        platforms.push(new Platform(0, 500, 800, 100)); 
+        platforms.push(new Platform(950, 500, 600, 100)); 
+        platforms.push(new Platform(300, 350, 100, 20)); 
+        platforms.push(new Platform(500, 250, 100, 20)); 
+        platforms.push(new Platform(700, 350, 100, 20)); 
+        platforms.push(new Platform(1100, 350, 80, 20));
+        platforms.push(new Platform(1300, 250, 80, 20));
+        
+        platforms.push(new Platform(1750, 350, 100, 20));
+        platforms.push(new Platform(1950, 250, 100, 20));
+        platforms.push(new Platform(2150, 150, 100, 20));
+
+        // 第二个断口缩小到原来的50%：
+        // 前一个平台结束于 1550，原断口为 1550 到 1830（宽 280）。
+        // 现将断口缩小一半（宽 140），即平台起始点提前至 1690，宽度增加至 1290 以保证后续右侧边缘位置不变。
+        platforms.push(new Platform(1690, 450, 1290, 150)); 
+        platforms.push(new Platform(3100, 400, 400, 20)); 
+        platforms.push(new Platform(3600, 300, 300, 20)); 
+        platforms.push(new Platform(4000, 450, 1100, 150)); 
+
+        goal = new DaddyGoal(4700, 350);
+
+        bones.push(new Bone(330, 300));
+        bones.push(new Bone(530, 200));
+        bones.push(new Bone(730, 300));
+        bones.push(new Bone(1330, 200));
+        bones.push(new Bone(1100, 450));
+        bones.push(new Bone(2180, 100));
+        bones.push(new Bone(3300, 350)); 
+        bones.push(new Bone(3750, 250)); 
+        bones.push(new Bone(4650, 400)); 
+
+        enemies.push(new Enemy(400, 470, 200)); 
+        enemies.push(new Enemy(1000, 470, 300)); 
+        enemies.push(new Astronaut(2900, 410)); 
+        enemies.push(new CarbonAtom(2950, 410)); 
+        enemies.push(new ProfessorLiang(3000, 450, 200)); 
+        enemies.push(new Enemy(3300, 370, 100)); 
+    }
+
+    function checkCollisions() {
+        milkActive = viscousMilks.some(milk => milk.active); 
+
+        player.grounded = false;
+        for (let p of platforms) {
+            if (player.x < p.x + p.w && player.x + player.w > p.x &&
+                player.y < p.y + p.h && player.y + player.h > p.y) {
+                
+                const prevY = player.y - player.vy;
+                if (prevY + player.h <= p.y + 10) { 
+                    player.grounded = true;
+                    player.vy = 0;
+                    player.y = p.y - player.h;
+                } else if (player.vy < 0 && prevY >= p.y + p.h) {
+                    player.vy = 0;
+                    player.y = p.y + p.h;
+                } else {
+                   if (player.x + player.w/2 < p.x + p.w/2) {
+                       player.x = p.x - player.w;
+                       player.vx = 0;
+                   } else {
+                       player.x = p.x + p.w;
+                       player.vx = 0;
+                   }
+                }
+            }
+        }
+
+        for (let b of bones) {
+            if (!b.collected && 
+                player.x < b.x + b.w && player.x + player.w > b.x &&
+                player.y < b.y + b.h && player.y + player.h > b.y) {
+                b.collected = true;
+                score += 100;
+                scoreEl.innerText = score;
+            }
+        }
+
+        for (let clone of clones) {
+             if (clone.active &&
+                player.x < clone.x + clone.w - 5 && player.x + player.w > clone.x + 5 &&
+                player.y < clone.y + clone.h && player.y + player.h > clone.y) {
+                window.gameControl.gameOver("被克隆小狗追上了！");
+                return;
+            }
+        }
+
+        for (let e of enemies) {
+            if (e.active &&
+                player.x < e.x + e.w - 5 && player.x + player.w > e.x + 5 &&
+                player.y < e.y + e.h && player.y + player.h > e.y) {
+                
+                if (e instanceof ProfessorLiang || e instanceof CarbonAtom) {
+                    window.gameControl.gameOver(e instanceof ProfessorLiang ? "梁叫兽的威胁太大了！" : "小狗被碳原子击中了！");
+                    return;
+                }
+                
+                if (player.vy > 0 && player.y + player.h < e.y + e.h/2 + 10) {
+                    e.active = false;
+                    player.vy = -8; 
+                    score += 200;
+                    scoreEl.innerText = score;
+                    
+                    bones.push(new Bone(e.x, e.y));
+
+                    if (!(e instanceof Astronaut)) {
+                         messageBubbles.push(new MessageBubble(e.x + e.w/2, e.y, "我是你们领导，管你们来了"));
+                    }
+
+                } else {
+                    let reason = "";
+                    if (e instanceof Astronaut) {
+                        reason = "小狗被不收手机的宇航员攻击了！"; 
+                    } else {
+                        reason = "小狗被导航员暴揍了！"; 
+                    }
+                    window.gameControl.gameOver(reason);
+                    return;
+                }
+            }
+        }
+        
+        for (let p of projectiles) {
+            if (!p.active) continue;
+            
+            for (let clone of clones) {
+                if (clone.active && 
+                    p.x < clone.x + clone.w && p.x + p.w > clone.x &&
+                    p.y < clone.y + clone.h && p.y + p.h > clone.y) {
+                    
+                    p.active = false;
+                    clone.active = false;
+                    score += 500;
+                    scoreEl.innerText = score;
+                    messageBubbles.push(new MessageBubble(clone.x, clone.y, "克隆体消灭！"));
+                    bones.push(new Bone(clone.x, clone.y));
+                }
+            }
+
+            for (let e of enemies) {
+                if (e.active && 
+                    p.x < e.x + e.w && p.x + p.w > e.x &&
+                    p.y < e.y + e.h && p.y + p.h > e.y) {
+                    
+                    p.active = false; 
+                    
+                    if (e instanceof ProfessorLiang) {
+                        messageBubbles.push(new MessageBubble(e.x + e.w/2, e.y, "晚自习收手机!"));
+                    } else if (e instanceof Astronaut) {
+                        e.active = false; 
+                        messageBubbles.push(new MessageBubble(e.x + e.w/2, e.y, "就是这个女人，收你们手机。"));
+                        score += 500;
+                        scoreEl.innerText = score;
+                        bones.push(new Bone(e.x, e.y));
+                    } else if (e instanceof CarbonAtom) { 
+                         e.active = false;
+                         messageBubbles.push(new MessageBubble(e.x + e.w/2, e.y, "把正确的成绩重新登上"));
+                         score += 400;
+                         scoreEl.innerText = score;
+                         bones.push(new Bone(e.x, e.y));
+                    } else {
+                        e.active = false;
+                        score += 300;
+                        scoreEl.innerText = score;
+                        messageBubbles.push(new MessageBubble(e.x + e.w/2, e.y, "我是你们领导，管你们来了"));
+                        bones.push(new Bone(e.x, e.y));
+                    }
+                }
+            }
+            
+            for (let i = 0; i < calculusAttacks.length; i++) {
+                let book = calculusAttacks[i];
+                if (book.active && 
+                    p.x < book.x + book.w && p.x + p.w > book.x &&
+                    p.y < book.y + book.h && p.y + p.h > book.y) {
+                    
+                    p.active = false; 
+                    book.active = false;
+                }
+            }
+            
+            for (let i = 0; i < carbonAttacks.length; i++) {
+                let carbon = carbonAttacks[i];
+                if (carbon.active && 
+                    p.x < carbon.x + carbon.w && p.x + p.w > carbon.x &&
+                    p.y < carbon.y + carbon.h && p.y + p.h > carbon.y) { 
+                    
+                    p.active = false; 
+                    carbon.active = false;
+                }
+            }
+        }
+        
+        for (let milk of viscousMilks) {
+            if (milk.active && 
+                player.x < milk.x + milk.w && player.x + player.w > milk.x &&
+                player.y < milk.y + milk.h && player.y + player.h > milk.y) {
+                
+                milk.active = false;
+                warningModal.style.display = 'block';
+                setTimeout(() => { warningModal.style.display = 'none'; }, 2500); 
+                
+                delayedEvents.push({ type: 'spawnClone', timer: 300, x: player.x, y: player.y }); 
+            }
+        }
+
+        for (let book of calculusAttacks) {
+            if (book.active && 
+                player.x < book.x + book.w && player.x + player.w > book.x &&
+                player.y < book.y + book.h && player.y + player.h > book.y) {                 
+                book.active = false;
+                window.gameControl.gameOver("随机赋分砸中！小狗对《工科数学分析》产生了阴影。");
+                return;
+            }
+        }
+        
+        for (let carbon of carbonAttacks) {
+            if (carbon.active && 
+                player.x < carbon.x + carbon.w && player.x + player.w > carbon.x &&
+                player.y < carbon.y + carbon.h && player.y + player.h > carbon.y) {
+                
+                carbon.active = false;
+                window.gameControl.gameOver(`被碳原子产生的成绩击中！`);
+                return;
+            }
+        }
+
+        if (player.x < goal.x + goal.w && player.x + player.w > goal.x &&
+            player.y < goal.y + goal.h && player.y + player.h > goal.y) {
+            window.gameControl.gameWin();
+        }
+
+        if (player.y > canvas.height) {
+            window.gameControl.gameOver("你掉下去了，小心脚下！");
+        }
+    }
+
+    function gameLoop(timestamp) {
+        if (!gameRunning) return;
+
+        if (isPaused) {
+            pauseScreen.style.display = 'flex';
+            requestAnimationFrame(gameLoop); 
+            return;
+        } else {
+            pauseScreen.style.display = 'none';
+        }
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const gradient = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 50, canvas.width/2, canvas.height/2, 800);
+        gradient.addColorStop(0, "#fff8e1");
+        gradient.addColorStop(1, "#ffcc80");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        player.update();
+        enemies.forEach(e => e.update());
+        projectiles.forEach(p => p.update());
+        calculusAttacks.forEach(book => book.update()); 
+        carbonAttacks.forEach(carbon => carbon.update()); 
+        viscousMilks.forEach(milk => milk.update()); 
+        clones.forEach(c => c.update()); 
+        
+        for (let i = delayedEvents.length - 1; i >= 0; i--) {
+            let event = delayedEvents[i];
+            event.timer--;
+            if (event.timer <= 0) {
+                if (event.type === 'spawnClone') {
+                    clones.push(new ClonePuppy(event.x, event.y));
+                    messageBubbles.push(new MessageBubble(event.x, event.y - 40, "克隆小狗出现了！"));
+                }
+                delayedEvents.splice(i, 1);
+            }
+        }
+        
+        projectiles = projectiles.filter(p => p.active);
+        calculusAttacks = calculusAttacks.filter(book => book.active); 
+        carbonAttacks = carbonAttacks.filter(carbon => carbon.active); 
+        viscousMilks = viscousMilks.filter(milk => milk.active); 
+        clones = clones.filter(c => c.active);
+        
+        messageBubbles.forEach(m => m.update());
+        messageBubbles = messageBubbles.filter(m => m.active);
+        
+        milkActive = viscousMilks.some(milk => milk.active); 
+        
+        if (attackCooldown > 0) {
+            attackCooldown--;
+            cooldownEl.innerText = `冷却中...`; 
+        } else {
+            cooldownEl.innerText = '准备就绪';
+        }
+        
+        checkCollisions();
+
+        let targetCamX = player.x - canvas.width * 0.3;
+        targetCamX = Math.max(0, Math.min(targetCamX, worldWidth - canvas.width));
+        cameraX += (targetCamX - cameraX) * 0.1;
+
+        platforms.forEach(p => p.draw(ctx, cameraX));
+        
+        bones.forEach(b => b.draw(ctx, cameraX, timestamp)); 
+        
+        enemies.forEach(e => e.draw(ctx, cameraX, timestamp));
+        clones.forEach(c => c.draw(ctx, cameraX)); 
+        projectiles.forEach(p => p.draw(ctx, cameraX)); 
+        calculusAttacks.forEach(book => book.draw(ctx, cameraX)); 
+        carbonAttacks.forEach(carbon => carbon.draw(ctx, cameraX)); 
+        viscousMilks.forEach(milk => milk.draw(ctx, cameraX)); 
+        goal.draw(ctx, cameraX, timestamp);
+        player.draw(ctx, cameraX);
+        messageBubbles.forEach(m => m.draw(ctx, cameraX)); 
+
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function populateHandbook() {
+        const content = document.getElementById('handbook-content');
+        if (content.children.length > 0) return; 
+
+        const characters = [
+            { 
+                name: "小狗 (你)", 
+                desc: "别看我是一只小狗，我可是一个在211大学成绩优异的大学生，也是学生会的部长。现在我要去找我从未见过的爸爸。同时我是导航员的领导，要求导航员看守晚自习的时候收大一学弟的手机。但是导航员时常不听话，甚至想在我找爸爸的同时用身体袭击我，不过我会用从大一新生没收到的手机攻击导航员，或者从头顶上跳下来偷袭他。", 
+                render: (c) => new Player(10, 10).draw(c, 0)
+            },
+            { 
+                name: "普通导航员", 
+                desc: "我平时负责看守大一学弟的晚自习，但是我和学弟都觉得晚自习对学习没用，所以常常给小狗使绊子。但是小狗不觉得我们做的是对的，所以常常用手机攻击我或者从头顶上偷袭我，不过要是小狗碰到了我的身体，他就完蛋了，因为我会暴揍他一顿。", 
+                render: (c) => new Enemy(15, 15, 0).draw(c, 0, 0)
+            },
+            { 
+                name: "宇航员", 
+                desc: "我跟其他导航员对晚自习的态度是一样的，不过我也有我的特点。我是一个不收手机的导航员，同时会投掷《工科数学分析（一）》书本攻击傻小狗。", 
+                render: (c) => new Astronaut(10, 10).draw(c, 0)
+            },
+            { 
+                name: "碳原子", 
+                desc: "我也是导航员，我还负责批阅他们的《工科数学分析》的模拟考试卷，但是我有的时候很忙，就会随便填写一个成绩报上去。", 
+                render: (c) => new CarbonAtom(10, 10).draw(c, 0)
+            },
+            { 
+                name: "梁叫兽", 
+                desc: "刚毕业就成了大一新生的导员，同时也成为了小狗的领导。如果你在我头上跳，我会喷射出黏稠牛奶，而且手机攻击无效，还会让你晚自习收手机。", 
+                render: (c) => { 
+                    c.save(); c.scale(0.6, 0.6); c.translate(20, 20);
+                    new ProfessorLiang(10, 50, 0).draw(c, 0, 0); 
+                    c.restore();
+                }
+            },
+            { 
+                name: "克隆体", 
+                desc: "我虽然跟小狗长得很像，但是我想取代他。如果不想见到我就不要被粘稠牛奶击中，或者直接用手机打死我。", 
+                render: (c) => new ClonePuppy(10, 10).draw(c, 0)
+            },
+            { 
+                name: "微波炉", 
+                desc: "我是小狗要找的爸爸。但其实，小狗根本找不到真正的爸爸了，因为实际上小狗根本没有爸爸，可能是他的爸爸飞了……哎，谁知道呢！我只是他的继父而已。所以他最后只能找到我这个继父。不过小狗他不知道他没有爸爸。", 
+                render: (c) => {
+                    c.save(); c.scale(0.6, 0.6); c.translate(20, 20);
+                    new DaddyGoal(0, 0).draw(c, 0, 0);
+                    c.restore();
+                }
+            }
+        ];
+
+        characters.forEach((char, index) => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'handbook-item';
+            
+            const canvasContainer = document.createElement('div');
+            canvasContainer.className = 'handbook-canvas-container';
+            const miniCanvas = document.createElement('canvas');
+            miniCanvas.width = 60;
+            miniCanvas.height = 60;
+            canvasContainer.appendChild(miniCanvas);
+
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'handbook-info';
+            const title = document.createElement('h3');
+            title.innerText = char.name;
+            const desc = document.createElement('p');
+            desc.innerText = char.desc;
+            infoDiv.appendChild(title);
+            infoDiv.appendChild(desc);
+
+            itemDiv.appendChild(canvasContainer);
+            itemDiv.appendChild(infoDiv);
+            content.appendChild(itemDiv);
+
+            const mCtx = miniCanvas.getContext('2d');
+            mCtx.translate(0, 0); 
+            char.render(mCtx);
+        });
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (e.code === 'KeyP' || e.code === 'Escape') {
+            if (gameRunning) isPaused = !isPaused;
+            return;
+        }
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+        if (e.code === 'ArrowUp' || e.code === 'Space' || e.code === 'KeyW') keys.up = true;
+        if (e.code === 'KeyK' || e.code === 'ControlLeft' || e.code === 'ShiftLeft' || e.code === 'ControlRight' || e.code === 'ShiftRight') keys.attack = true; 
+    });
+
+    window.addEventListener('keyup', (e) => {
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+        if (e.code === 'ArrowUp' || e.code === 'Space' || e.code === 'KeyW') keys.up = false;
+        if (e.code === 'KeyK' || e.code === 'ControlLeft' || e.code === 'ShiftLeft' || e.code === 'ControlRight' || e.code === 'ShiftRight') keys.attack = false; 
+    });
+
+    const btnLeft = document.getElementById('btn-left');
+    const btnRight = document.getElementById('btn-right');
+    const btnJump = document.getElementById('btn-jump');
+    const btnAttack = document.getElementById('btn-attack'); 
+
+    const addTouch = (elem, key) => {
+        elem.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = true; });
+        elem.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = false; });
+    };
+
+    addTouch(btnLeft, 'left');
+    addTouch(btnRight, 'right');
+    addTouch(btnJump, 'up');
+    addTouch(btnAttack, 'attack'); 
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+</script>
+</body>
+</html>
